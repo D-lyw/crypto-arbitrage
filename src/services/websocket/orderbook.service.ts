@@ -29,6 +29,11 @@ export class OrderBookService extends BaseWebSocketService implements OnModuleIn
   protected handleMessage(data: string) {
     try {
       const message = JSON.parse(data);
+
+      if (message.event === 'subscribe') {
+        this.logger.log(`已成功订阅 ${message.channel}`);
+        return;
+      }
       
       if (message.event === 'update' && message.channel === 'spot.book_ticker') {
         const { currency_pair, bid, ask, t } = message.result;

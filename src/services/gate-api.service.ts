@@ -20,7 +20,6 @@ export class GateApiService {
   async getPrice(symbol: string): Promise<number> {
     try {
       const response = await this.spotApi.listTickers({ currencyPair: symbol });
-      console.log(response.body);
       return parseFloat(response.body[0].last!);
     } catch (error) {
       this.logger.error(`获取价格失败: ${error.message}`);
@@ -48,7 +47,6 @@ export class GateApiService {
   async getBalance(currency?: string): Promise<number> {
     try {
       const response = await this.spotApi.listSpotAccounts({ currency });
-      console.log(response.body);
       return parseFloat(response.body[0].available!);
     } catch (error) {
       this.logger.error(`获取余额失败: ${error.message}`);

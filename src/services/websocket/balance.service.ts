@@ -34,7 +34,7 @@ export class BalanceService extends BaseWebSocketService implements OnModuleInit
       }
       
       if (message.event === 'update' && message.channel === 'spot.balances') {
-        console.log(message);
+        console.log("balances:", message);
         const { currency, available, locked } = message.result;
         this.balanceUpdates.next({
           currency,
@@ -48,6 +48,6 @@ export class BalanceService extends BaseWebSocketService implements OnModuleInit
   }
 
   protected subscribe() {
-    this.sendMessage('spot.balances', 'subscribe', []);
+    this.sendMessage('spot.balances', 'subscribe', null);
   }
 } 

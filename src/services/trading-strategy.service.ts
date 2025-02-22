@@ -13,7 +13,7 @@ export class TradingStrategyService {
   public tradeSignals = new Subject<TradeSignal>();
   
   constructor(
-    private readonly priceService: PriceService,
+    // private readonly priceService: PriceService,
     private readonly tickerService: TickerService,
     private readonly orderBookService: OrderBookService,
     private readonly balanceService: BalanceService,
@@ -22,34 +22,35 @@ export class TradingStrategyService {
   }
 
   private initializeStrategy() {
-    this.priceService.priceUpdates.subscribe(priceData => {
-      console.log(priceData);
-      const thresholds = tradingConfig.trading.thresholds[priceData.symbol];
+    // this.priceService.priceUpdates.subscribe(priceData => {
+    //   console.log(priceData);
+    //   const thresholds = tradingConfig.trading.thresholds[priceData.symbol];
       
-      if (!thresholds) {
-        return;
-      }
+    //   if (!thresholds) {
+    //     return;
+    //   }
 
-      if (priceData.price <= thresholds.buyThreshold) {
-        this.tradeSignals.next({
-          symbol: priceData.symbol,
-          action: 'BUY',
-          price: priceData.price,
-          quantity: thresholds.tradingAmount,
-        });
-      } else if (priceData.price >= thresholds.sellThreshold) {
-        this.tradeSignals.next({
-          symbol: priceData.symbol,
-          action: 'SELL',
-          price: priceData.price,
-          quantity: thresholds.tradingAmount,
-        });
-      }
-    });
+    //   if (priceData.price <= thresholds.buyThreshold) {
+    //     this.tradeSignals.next({
+    //       symbol: priceData.symbol,
+    //       action: 'BUY',
+    //       price: priceData.price,
+    //       quantity: thresholds.tradingAmount,
+    //     });
+    //   } else if (priceData.price >= thresholds.sellThreshold) {
+    //     this.tradeSignals.next({
+    //       symbol: priceData.symbol,
+    //       action: 'SELL',
+    //       price: priceData.price,
+    //       quantity: thresholds.tradingAmount,
+    //     });
+    //   }
+    // });
 
     // 订阅价格更新
     this.tickerService.tickerUpdates.subscribe(ticker => {
       // 处理价格更新
+      console.log(ticker);
     });
 
     // 订阅订单簿更新

@@ -14,7 +14,7 @@ import { GateApiService } from './services/gate-api.service';
     TickerService,
     OrderBookService,
     BalanceService,
-    PriceService,
+    // PriceService,
     TradingStrategyService,
     TradeExecutorService,
     GateApiService,
