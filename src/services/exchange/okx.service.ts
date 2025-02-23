@@ -3,15 +3,16 @@ import { BaseExchangeService } from './base-exchange.service';
 import { tradingConfig } from '../../config/trading.config';
 
 @Injectable()
-export class GateService extends BaseExchangeService {
+export class OkxService extends BaseExchangeService {
   constructor() {
     super(
-      'gateio',
-      tradingConfig.exchange.apiKey,
-      tradingConfig.exchange.apiSecret,
+      'okx',
+      tradingConfig.okx.apiKey,
+      tradingConfig.okx.apiSecret,
       {
-        // Gate.io 特定的配置
+        // OKX 特定的配置
         defaultType: 'spot',
+        password: tradingConfig.okx.password, // OKX 需要额外的 password/passphrase
       }
     );
   }

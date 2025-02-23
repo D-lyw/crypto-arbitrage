@@ -2,12 +2,13 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Subject } from 'rxjs';
 import { BaseWebSocketService } from './base-websocket.service';
 import { tradingConfig } from '../../config/trading.config';
+import { Int, Num, Str } from 'ccxt';
 
 interface OrderBookData {
-  symbol: string;
-  bestBid: number;
-  bestAsk: number;
-  time: number;
+  symbol: Str;     // CCXT 格式的交易对
+  bids: [Num, Num][]; // [价格, 数量]
+  asks: [Num, Num][]; // [价格, 数量]
+  timestamp: Int;
 }
 
 @Injectable()
@@ -19,43 +20,43 @@ export class OrderBookService extends BaseWebSocketService implements OnModuleIn
   }
 
   async onModuleInit() {
-    await this.connectWebSocket();
+    this.startWatching();
   }
 
   onModuleDestroy() {
-    this.cleanup();
+    this.stopWatching();
   }
 
-  protected handleMessage(data: string) {
-    try {
-      const message = JSON.parse(data);
+  protected async watch() {
+    if (!this.exchangeId || !this.exchange) {
+      this.logger.warn('交易所未初始化');
+      return;
+    }
 
-      if (message.event === 'subscribe') {
-        this.logger.log(`已成功订阅 ${message.channel}`);
-        return;
-      }
+    try {
+      // 获取该交易所支持的交易对
+      const supportedSymbols = Object.entries(tradingConfig.trading.symbols)
+        .filter(([_, config]) => config.exchanges.includes(this.exchangeId))
+        .map(([symbol]) => symbol);
       
-      if (message.event === 'update' && message.channel === 'spot.book_ticker') {
-        const { currency_pair, bid, ask, t } = message.result;
-        this.orderBookUpdates.next({
-          symbol: currency_pair,
-          bestBid: parseFloat(bid),
-          bestAsk: parseFloat(ask),
-          time: t
-        });
+      for (const symbol of supportedSymbols) {
+        try {
+          const orderbook = await this.exchange.watchOrderBook(symbol);
+          
+          this.orderBookUpdates.next({
+            symbol: orderbook.symbol,
+            bids: orderbook.bids,
+            asks: orderbook.asks,
+            timestamp: orderbook.timestamp
+          });
+        } catch (error) {
+          this.logger.warn(`监听 ${symbol} 失败: ${error.message}`);
+          continue;
+        }
       }
     } catch (error) {
-      this.logger.error(`处理消息失败: ${error.message}`);
+      this.logger.error(`监听过程出错: ${error.message}`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
-  }
-
-  protected subscribe() {
-    const subscribeMessage = {
-      time: Math.floor(Date.now() / 1000),
-      channel: 'spot.book_ticker',
-      event: 'subscribe',
-      payload: tradingConfig.trading.symbols
-    };
-    this.ws.send(JSON.stringify(subscribeMessage));
   }
 } 

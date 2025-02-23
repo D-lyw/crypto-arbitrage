@@ -9,7 +9,9 @@ export abstract class BaseExchangeService {
     exchangeId: string,
     apiKey: string,
     secret: string,
-    options: ccxt.ExchangeOptions = {}
+    options?: {
+      [key: string]: any;
+    }
   ) {
     this.logger = new Logger(`${exchangeId}Service`);
     this.exchange = new ccxt[exchangeId]({
@@ -19,7 +21,7 @@ export abstract class BaseExchangeService {
     });
   }
 
-  async getPrice(symbol: string): Promise<number> {
+  async getPrice(symbol: string): Promise<ccxt.Num> {
     try {
       const ticker = await this.exchange.fetchTicker(symbol);
       return ticker.last;
@@ -29,10 +31,11 @@ export abstract class BaseExchangeService {
     }
   }
 
-  async getBalance(currency?: string): Promise<number> {
+  async getBalance(currency?: {}): Promise<ccxt.Balance> {
     try {
-      const balance = await this.exchange.fetchBalance();
-      return currency ? balance[currency].free : balance;
+      // const balance = await this.exchange.fetchBalance(currency);
+      // return currency ? balance[currency].free : balance;
+      return await this.exchange.fetchFreeBalance(currency);
     } catch (error) {
       this.logger.error(`获取余额失败: ${error.message}`);
       throw error;

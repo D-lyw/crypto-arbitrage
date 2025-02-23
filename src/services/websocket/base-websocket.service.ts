@@ -1,115 +1,80 @@
 import { Logger } from '@nestjs/common';
-import * as WebSocket from 'ws';
 import { Subject } from 'rxjs';
+import * as ccxt from 'ccxt';
 import { tradingConfig } from '../../config/trading.config';
-import * as crypto from 'crypto';
 
 export abstract class BaseWebSocketService {
   protected readonly logger: Logger;
-  protected ws: WebSocket;
-  protected pingInterval: NodeJS.Timeout;
-  protected reconnectTimeout: NodeJS.Timeout;
-  protected requiresAuth: boolean = false;
-
-  constructor(serviceName: string, requiresAuth: boolean = false) {
+  protected exchange: ccxt.Exchange;
+  protected isRunning: boolean = false;
+  protected exchangeId: string;
+ 
+  constructor(serviceName: string) {
     this.logger = new Logger(serviceName);
-    this.requiresAuth = requiresAuth;
   }
 
-  protected generateSignature(channel: string, event: string, timestamp: number): string {
-    const message = `channel=${channel}&event=${event}&time=${timestamp}`;
-    return crypto
-      .createHmac('sha512', tradingConfig.exchange.apiSecret)
-      .update(message)
-      .digest('hex');
+  async setExchange(exchangeId: string) {
+    this.exchangeId = exchangeId;
+    await this.initializeExchange();
+    return this;
   }
 
-  protected getAuthPayload(channel: string, event: string, timestamp: number) {
-    return {
-      method: 'api_key',
-      KEY: tradingConfig.exchange.apiKey,
-      SIGN: this.generateSignature(channel, event, timestamp)
-    };
-  }
-
-  protected sendMessage(channel: string, event: string, payload: any = null) {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const message: any = {
-      time: timestamp,
-      channel: channel,
-      event: event,
-      payload: payload
-    };
-
-    if (this.requiresAuth) {
-      message.auth = this.getAuthPayload(channel, event, timestamp);
+  private async initializeExchange() {
+    const config = tradingConfig[this.exchangeId];
+    const exchangeClass = ccxt.pro[this.exchangeId];
+    
+    if (!exchangeClass) {
+      throw new Error(`不支持的交易所: ${this.exchangeId}`);
     }
 
-    if (this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-    } else {
-      this.logger.warn('WebSocket 未连接,无法发送消息');
+    this.exchange = new exchangeClass({
+      apiKey: config.apiKey,
+      secret: config.apiSecret,
+      password: config.password,
+      enableRateLimit: true,
+    });
+
+    // 添加重试机制
+    const maxRetries = 3;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        await this.exchange.loadMarkets();
+        this.logger.log(`${this.exchangeId} 市场数据加载完成`);
+        return;
+      } catch (error) {
+        this.logger.warn(`第${i + 1}次加载${this.exchangeId}市场数据失败: ${error.message}`);
+        if (i === maxRetries - 1) {
+          throw error;
+        }
+        // 等待后重试
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     }
   }
 
-  protected async connectWebSocket() {
+  protected async startWatching() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    console.log(`Websocket ${this.constructor.name} started`);
+
     try {
-      this.ws = new WebSocket(tradingConfig.exchange.wsEndpoint);
-
-      this.ws.on('open', () => {
-        this.logger.log('WebSocket 已连接');
-        this.setupPingInterval();
-        this.subscribe();
-      });
-
-      this.ws.on('message', this.handleMessage.bind(this));
-
-      this.ws.on('close', () => {
-        this.logger.warn('WebSocket 连接已关闭');
-        this.cleanup();
-        this.scheduleReconnect();
-      });
-
-      this.ws.on('error', (error) => {
-        this.logger.error(`WebSocket 错误: ${error.message}`);
-      });
-
-    } catch (error) {
-      this.logger.error(`建立 WebSocket 连接失败: ${error}`);
-      this.scheduleReconnect();
+      while (this.isRunning) {
+        try {
+          await this.watch();
+        } catch (error) {
+          this.logger.error(`监听错误: ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    } finally {
+      this.isRunning = false;
     }
   }
 
-  protected abstract handleMessage(data: string): void;
-  protected abstract subscribe(): void;
-
-  protected setupPingInterval() {
-    this.pingInterval = setInterval(() => {
-      if (this.ws.readyState === WebSocket.OPEN) {
-        const pingMessage = {
-          time: Math.floor(Date.now() / 1000),
-          channel: 'spot.ping'
-        };
-        this.ws.send(JSON.stringify(pingMessage));
-      }
-    }, 5000);
+  protected stopWatching() {
+    this.isRunning = false;
+    console.log(`Websocket ${this.constructor.name} ended`);
   }
 
-  protected scheduleReconnect() {
-    this.reconnectTimeout = setTimeout(() => {
-      this.logger.log('尝试重新连接...');
-      this.connectWebSocket();
-    }, 10000);
-  }
-
-  protected cleanup() {
-    if (this.pingInterval) clearInterval(this.pingInterval);
-    if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
-    if (this.ws) {
-      this.ws.removeAllListeners();
-      if (this.ws.readyState === WebSocket.OPEN) {
-        this.ws.close();
-      }
-    }
-  }
-} 
+  protected abstract watch(): Promise<void>;
+}

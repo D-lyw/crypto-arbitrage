@@ -3,12 +3,12 @@ import { BaseExchangeService } from './base-exchange.service';
 import { tradingConfig } from '../../config/trading.config';
 
 @Injectable()
-export class BinanceService extends BaseExchangeService {
+export class GateioService extends BaseExchangeService {
   constructor() {
     super(
-      'binance',
-      tradingConfig.binance.apiKey,
-      tradingConfig.binance.apiSecret,
+      'gate',
+      tradingConfig.gate.apiKey,
+      tradingConfig.gate.apiSecret,
       {
         defaultType: 'spot',
       }

@@ -4,8 +4,10 @@ import { BaseWebSocketService } from './base-websocket.service';
 
 interface BalanceData {
   currency: string;
-  available: string;
-  locked: string;
+  free: number;      // 可用余额
+  used: number;      // 冻结余额
+  total: number;     // 总余额
+  timestamp: number;
 }
 
 @Injectable()
@@ -13,41 +15,28 @@ export class BalanceService extends BaseWebSocketService implements OnModuleInit
   public balanceUpdates = new Subject<BalanceData>();
 
   constructor() {
-    super('BalanceService', true);
+    super('BalanceService');
   }
 
   async onModuleInit() {
-    await this.connectWebSocket();
+    this.startWatching();
   }
 
   onModuleDestroy() {
-    this.cleanup();
+    this.stopWatching();
   }
 
-  protected handleMessage(data: string) {
-    try {
-      const message = JSON.parse(data);
-
-      if (message.event === 'subscribe') {
-        this.logger.log(`已成功订阅 ${message.channel}`);
-        return;
-      }
-      
-      if (message.event === 'update' && message.channel === 'spot.balances') {
-        console.log("balances:", message);
-        const { currency, available, locked } = message.result;
-        this.balanceUpdates.next({
-          currency,
-          available,
-          locked
-        });
-      }
-    } catch (error) {
-      this.logger.error(`处理消息失败: ${error.message}`);
+  protected async watch() {
+    const balance = await this.exchange.watchBalance();
+    
+    for (const [currency, data] of Object.entries(balance)) {
+      this.balanceUpdates.next({
+        currency,
+        free: Number(data.free),
+        used: Number(data.used),
+        total: Number(data.total),
+        timestamp: Date.now()
+      });
     }
-  }
-
-  protected subscribe() {
-    this.sendMessage('spot.balances', 'subscribe', null);
   }
 } 

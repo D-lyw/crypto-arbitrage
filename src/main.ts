@@ -18,7 +18,6 @@ async function bootstrap() {
   await app.listen(port);
 
   logger.log(`交易机器人已启动，监听端口: ${port}`);
-  logger.log('正在连接交易所 WebSocket...');
 }
 
 bootstrap().catch((error) => {

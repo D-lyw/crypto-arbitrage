@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TradingStrategyService } from './trading-strategy.service';
 import { TradeSignal } from '../types/trading.types';
-import { GateApiService } from './gate-api.service';
+import { GateApiService } from '../../archive/gate-api.service';
 import { tradingConfig } from '../config/trading.config';
 import { Order } from 'gate-api';
 
