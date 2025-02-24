@@ -3,7 +3,7 @@ import { BaseExchangeService } from './base-exchange.service';
 import { tradingConfig } from '../../config/trading.config';
 
 @Injectable()
-export class GateioService extends BaseExchangeService {
+export class GateService extends BaseExchangeService {
   constructor() {
     super(
       'gate',

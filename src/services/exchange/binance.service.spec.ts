@@ -13,10 +13,10 @@ describe('BinanceService', () => {
   });
 
   describe('getPrice', () => {
-    it('should get price for BTC/USDT', async () => {
+    it('should get price for UNI/USDT', async () => {
       try {
-        const price = await service.getPrice('BTC/USDT');
-        console.log('BTC/USDT 价格:', price);
+        const price = await service.getPrice('UNI/USDT');
+        console.log('UNI/USDT 价格:', price);
         expect(price).toBeGreaterThan(0);
       } catch (error) {
         console.error('获取价格失败:', error);
@@ -34,7 +34,8 @@ describe('BinanceService', () => {
   describe('getBalance', () => {
     it('should get balance for USDT', async () => {
       try {
-        const balance = await service.getBalance({ currency: 'USDT' });
+        // Binance 交易所的余额查询不支持传入币种参数
+        const balance = await service.getBalance();
         console.log('USDT 余额:', balance);
         expect(balance).toBeDefined();
       } catch (error) {
@@ -48,18 +49,18 @@ describe('BinanceService', () => {
     it('should create a limit buy order', async () => {
       try {
         // 获取当前市场价格
-        const price = await service.getPrice('BTC/USDT');
+        const price = await service.getPrice('UNI/USDT');
         if (!price) throw new Error('无法获取价格');
         
-        // 设置一个比市场价低 20% 的买单价格（确保不会真正成交）
-        const buyPrice = Number(price) * 0.8;
+        // 设置一个比市场价高 200% 的卖单价格（确保不会真正成交）
+        const sellPrice = Number(price) * 2;
         
         const order = await service.createOrder({
-          symbol: 'BTC/USDT',
+          symbol: 'UNI/USDT',
           type: 'limit',
-          side: 'buy',
-          amount: 0.001, // 很小的测试数量
-          price: buyPrice,
+          side: 'sell',
+          amount: 1, 
+          price: sellPrice,
         });
 
         console.log('创建的订单:', order);
@@ -67,7 +68,7 @@ describe('BinanceService', () => {
         
         // 取消测试订单
         if (order.id) {
-          await service.cancelOrder(order.id, 'BTC/USDT');
+          await service.cancelOrder(order.id, 'UNI/USDT');
           console.log('测试订单已取消');
         }
       } catch (error) {

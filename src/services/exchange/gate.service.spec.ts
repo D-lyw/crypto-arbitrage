@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GateioService } from './gateio.service';
+import { GateService } from './gate.service';
 
-describe('GateioService', () => {
-  let service: GateioService;
+describe('GateService', () => {
+  let service: GateService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [GateioService],
+      providers: [GateService],
     }).compile();
 
-    service = module.get<GateioService>(GateioService);
+    service = module.get<GateService>(GateService);
   });
 
   describe('getPrice', () => {

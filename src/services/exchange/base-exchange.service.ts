@@ -31,11 +31,11 @@ export abstract class BaseExchangeService {
     }
   }
 
-  async getBalance(currency?: {}): Promise<ccxt.Balance> {
+  async getBalance(currency?: {}): Promise<ccxt.Balances> {
     try {
       // const balance = await this.exchange.fetchBalance(currency);
       // return currency ? balance[currency].free : balance;
-      return await this.exchange.fetchFreeBalance(currency);
+      return await this.exchange.fetchBalance(currency);
     } catch (error) {
       this.logger.error(`获取余额失败: ${error.message}`);
       throw error;
